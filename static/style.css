@@ -1,0 +1,19 @@
+body{
+    padding:0 30px;
+}
+
+h1 {
+    text-align: center;
+}
+
+.summary p {
+    text-align: right;
+}
+
+.d_sizes_list ul li {
+    font-size: 0.875em;
+}
+
+canvas#sizeChart {
+    width: 100%!important;
+}
