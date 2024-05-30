@@ -5,6 +5,8 @@ import ftplib
 from dotenv import load_dotenv
 from flask import Flask, jsonify, render_template_string
 from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.executors.pool import ThreadPoolExecutor
+from apscheduler.executors.pool import ProcessPoolExecutor
 
 app = Flask(__name__)
 
@@ -21,8 +23,7 @@ ftp_server = os.environ['FTPHOST']
 ftp_user = os.environ['FTPUSER']
 ftp_password = os.environ['FTPPASS']
 ftp_path = os.environ['FTPPATH']
-
-TOTAL_CAPACITY_GB = 40  # 全体の容量は40GB
+TOTAL_CAPACITY_GB = int(os.environ['TOTALCAPACITYGB'])
 
 def get_total_size(ftp, path):
     total_size = 0
@@ -179,12 +180,21 @@ def api_last_updated():
     return jsonify({'last_updated': last_updated})
 
 if __name__ == '__main__':
-    scheduler = BackgroundScheduler()
-    scheduler.add_job(update_directory_sizes, 'interval', minutes=3)  # 30分ごとに実行
+    scheduler = BackgroundScheduler(
+        executors={
+            'default': ThreadPoolExecutor(10),
+            'processpool': ProcessPoolExecutor(5)
+        },
+        job_defaults={
+            'coalesce': False,
+            'max_instances': 1
+        }
+    )
+    scheduler.add_job(update_directory_sizes, 'interval', minutes=10, replace_existing=True)  # minutesごとに実行
     update_directory_sizes()  # 初回実行
     scheduler.start()
 
     try:
-        app.run(debug=True)
+        app.run(debug=True, host='0.0.0.0', port=5050)
     finally:
         scheduler.shutdown()
